@@ -70,11 +70,15 @@ jobs:
           docker push \
             ${{ steps.login-ecr.outputs.registry }}/mp-backend:latest
 
-      - name: Configure kubectl for EKS
+      - name: Configure kubeconfig
         run: |
-          aws eks update-kubeconfig \
-            --region ${{ secrets.AWS_REGION }} \
-            --name serious-bluegrass-crow
+          mkdir -p ~/.kube
+          echo "${{ secrets.EKS_KUBECONFIG_B64 }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify Kubernetes access
+        run: |
+          kubectl get nodes
 
       - name: Deploy backend to Kubernetes
         run: |
