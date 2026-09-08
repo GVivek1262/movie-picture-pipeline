@@ -116,7 +116,7 @@ jobs:
 
       - name: Deploy backend to Kubernetes
         run: |
-          kubectl apply -k starter/backend/k8s
+          kubectl apply --server-side --force-conflicts -k starter/backend/k8s
 
       - name: Update backend image
         run: |
