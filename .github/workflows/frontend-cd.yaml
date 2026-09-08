@@ -10,15 +10,12 @@ on:
 
 jobs:
   deploy:
+    name: Build and Deploy Frontend
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Build Docker image
-        working-directory: starter/frontend
-        run: docker build --tag mp-frontend:latest .
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -31,10 +28,82 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Build Docker image
+        working-directory: starter/frontend
+        run: |
+          docker build --tag mp-frontend:latest .
+
       - name: Tag Docker image
         run: |
-          docker tag mp-frontend:latest ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
+          docker tag mp-frontend:latest \
+            ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
 
       - name: Push Docker image to ECR
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+
+          cat > ~/.kube/config <<EOF
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - cluster:
+              certificate-authority-data: ${EKS_CA_DATA}
+              server: ${EKS_CLUSTER_ENDPOINT}
+            name: serious-bluegrass-crow
+
+          contexts:
+          - context:
+              cluster: serious-bluegrass-crow
+              user: github-actions-user
+            name: serious-bluegrass-crow
+
+          current-context: serious-bluegrass-crow
+
+          users:
+          - name: github-actions-user
+            user:
+              exec:
+                apiVersion: client.authentication.k8s.io/v1beta1
+                args:
+                - --region
+                - us-east-1
+                - eks
+                - get-token
+                - --cluster-name
+                - serious-bluegrass-crow
+                - --output
+                - json
+                command: aws
+          EOF
+
+          chmod 600 ~/.kube/config
+        env:
+          EKS_CA_DATA: ${{ secrets.EKS_CA_DATA }}
+          EKS_CLUSTER_ENDPOINT: ${{ secrets.EKS_CLUSTER_ENDPOINT }}
+
+      - name: Verify Kubernetes access
+        run: |
+          kubectl get nodes
+
+      - name: Deploy frontend to Kubernetes
+        run: |
+          kubectl apply -k starter/frontend/k8s
+
+      - name: Update frontend image
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
+
+      - name: Wait for deployment
+        run: |
+          kubectl rollout status deployment/frontend --timeout=5m
+
+      - name: Verify frontend deployment
+        run: |
+          kubectl get pods
+          kubectl get svc frontend
