@@ -1,7 +1,13 @@
 FROM  public.ecr.aws/docker/library/node:18.14.2-alpine3.17
 
-ARG REACT_APP_MOVIE_API_URL
-ENV REACT_APP_MOVIE_API_URL=${REACT_APP_MOVIE_API_URL}
+#ARG REACT_APP_MOVIE_API_URL
+#ENV REACT_APP_MOVIE_API_URL=${REACT_APP_MOVIE_API_URL}
+- name: Build Docker image
+  working-directory: starter/frontend
+  run: |
+    docker build \
+      --build-arg REACT_APP_MOVIE_API_URL="${BACKEND_URL}" \
+      --tag mp-frontend:latest .
 
 WORKDIR /app
 

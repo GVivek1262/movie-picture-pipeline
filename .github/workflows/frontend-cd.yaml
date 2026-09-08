@@ -80,12 +80,17 @@ jobs:
           BACKEND_LB=$(kubectl get svc backend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           echo "REACT_APP_MOVIE_API_URL=http://$BACKEND_LB" >> $GITHUB_ENV
           echo "Backend URL: http://$BACKEND_LB"
+      - name: Get backend URL
+        run: |
+          BACKEND_LB=$(kubectl get svc backend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "BACKEND_URL=http://${BACKEND_LB}" >> "$GITHUB_ENV"
+          echo "Backend URL: http://${BACKEND_LB}"
 
       - name: Build Docker image
         working-directory: starter/frontend
         run: |
           docker build \
-            --build-arg REACT_APP_MOVIE_API_URL="$REACT_APP_MOVIE_API_URL" \
+            --build-arg REACT_APP_MOVIE_API_URL="${BACKEND_URL}" \
             --tag mp-frontend:latest .
 
       - name: Tag Docker image

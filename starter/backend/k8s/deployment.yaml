@@ -15,7 +15,10 @@ spec:
         app: backend
     spec:
       containers:
-        - name: backend
-          image: 839635154001.dkr.ecr.us-east-1.amazonaws.com/mp-backend:latest
-          ports:
-            - containerPort: 5000
+        containers:
+         - name: backend
+           image: 839635154001.dkr.ecr.us-east-1.amazonaws.com/mp-backend:latest
+           ports:
+            - name: http
+              containerPort: 5000
+
