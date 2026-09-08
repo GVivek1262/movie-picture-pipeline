@@ -28,21 +28,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker image
-        working-directory: starter/frontend
-        run: |
-          docker build --tag mp-frontend:latest .
-
-      - name: Tag Docker image
-        run: |
-          docker tag mp-frontend:latest \
-            ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
-
-      - name: Push Docker image to ECR
-        run: |
-          docker push \
-            ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
-
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
@@ -89,6 +74,29 @@ jobs:
       - name: Verify Kubernetes access
         run: |
           kubectl get nodes
+
+      - name: Get backend URL
+        run: |
+          BACKEND_LB=$(kubectl get svc backend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "REACT_APP_MOVIE_API_URL=http://$BACKEND_LB" >> $GITHUB_ENV
+          echo "Backend URL: http://$BACKEND_LB"
+
+      - name: Build Docker image
+        working-directory: starter/frontend
+        run: |
+          docker build \
+            --build-arg REACT_APP_MOVIE_API_URL="$REACT_APP_MOVIE_API_URL" \
+            --tag mp-frontend:latest .
+
+      - name: Tag Docker image
+        run: |
+          docker tag mp-frontend:latest \
+            ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push \
+            ${{ steps.login-ecr.outputs.registry }}/mp-frontend:latest
 
       - name: Deploy frontend to Kubernetes
         run: |
