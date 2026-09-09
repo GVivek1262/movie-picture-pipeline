@@ -72,13 +72,6 @@ jobs:
       - test
 
     steps:
-      build:
-    runs-on: ubuntu-latest
-    needs:
-      - lint
-      - test
-
-    steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -106,3 +99,4 @@ jobs:
       - name: Build Docker image
         working-directory: starter/frontend
         run: docker build --tag mp-frontend:latest .
+    
